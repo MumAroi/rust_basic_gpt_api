@@ -54,6 +54,7 @@ mod tests {
 
     #[test]
     fn tests_prints_agent_msg() {
-        PrintCommand::AICall.print_agent_message("Managing Agent", "Testing testing, processing something.");
+        PrintCommand::AICall
+            .print_agent_message("Managing Agent", "Testing testing, processing something.");
     }
 }
