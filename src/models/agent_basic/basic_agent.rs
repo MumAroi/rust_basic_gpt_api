@@ -8,6 +8,7 @@ pub enum AgentState {
     Finished,
 }
 
+#[derive(Debug)]
 pub struct BasicAgent {
     pub objective: String,
     pub position: String,
