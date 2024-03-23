@@ -47,7 +47,7 @@ impl AgentBackendDeveloper {
         }
     }
 
-    async fn call_initial_code(&mut self, factsheet: &mut FactSheet) {
+    async fn call_initial_backend_code(&mut self, factsheet: &mut FactSheet) {
         let code_template_str: String = read_code_template_contents();
 
         let mut msg_context: String = format!(
@@ -120,5 +120,72 @@ impl AgentBackendDeveloper {
         .await;
 
         ai_response
+    }
+}
+#[async_trait]
+impl SpecialFunctions for AgentBackendDeveloper {
+    fn get_attributes_from_agent(&self) -> &BasicAgent {
+        &self.attributes
+    }
+
+    async fn execute(
+        &mut self,
+        factsheet: &mut FactSheet,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        while self.attributes.state != AgentState::Finished {
+            match &self.attributes.state {
+                AgentState::Discovery => {
+                    self.call_initial_backend_code(factsheet).await;
+                    self.attributes.state = AgentState::Working;
+                    continue;
+                }
+                AgentState::Working => {
+                    if self.bug_cont == 0 {
+                        self.call_improved_backend_code(factsheet).await;
+                    } else {
+                        self.call_fix_code_bugs(factsheet).await;
+                    }
+                    self.attributes.state = AgentState::UnitTesting;
+                    continue;
+                }
+                AgentState::UnitTesting => {
+                    self.attributes.state = AgentState::Finished;
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn tests_writing_backend_developer() {
+        let mut agent: AgentBackendDeveloper = AgentBackendDeveloper::new();
+
+        let factsheet_str: &str = r#"
+        {
+            "project_description": "build a website that fetches and tracks fitness progress with timezone information",
+            "project_scope": {
+                "is_crud_required": true,
+                "is_user_login_and_logout": true,
+                "is_external_urls_required": true
+            },
+            "external_urls": [
+                "http://worldtimeapi.org/api/timezone"
+            ],
+            "backend_code": null,
+            "api_endpoint_schema": null
+        }"#;
+
+        let mut factsheet: FactSheet = serde_json::from_str(factsheet_str).unwrap();
+
+        agent
+            .execute(&mut factsheet)
+            .await
+            .expect("Failed to execute Backend Developer agent");
     }
 }
