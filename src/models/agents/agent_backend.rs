@@ -4,10 +4,11 @@ use crate::{
         print_rest_api_endpoints,
     },
     helpers::{
-        command_line::PrintCommand,
+        command_line::{confirm_safe_code, PrintCommand},
         general::{
             ai_task_request, check_status_code, read_code_template_contents,
             read_exec_main_contents, save_api_endpoints, save_backend_code,
+            WEB_SERVER_PROJECT_PATH,
         },
     },
     models::{
@@ -149,6 +150,55 @@ impl SpecialFunctions for AgentBackendDeveloper {
                     continue;
                 }
                 AgentState::UnitTesting => {
+                    PrintCommand::UnitTest.print_agent_message(
+                        &self.attributes.position.as_str(),
+                        "Backend Code unit Testing: Requesting user input",
+                    );
+
+                    let is_safe_code = confirm_safe_code();
+
+                    if !is_safe_code {
+                        panic!("Better go work on some AI aliment instead..")
+                    }
+
+                    PrintCommand::UnitTest.print_agent_message(
+                        &self.attributes.position.as_str(),
+                        "Backend Code unit Testing: building project...",
+                    );
+
+                    let build_backend_server: std::process::Output = Command::new("cargo")
+                        .arg("build")
+                        .current_dir(WEB_SERVER_PROJECT_PATH)
+                        .stdout(Stdio::piped())
+                        .stdout(Stdio::piped())
+                        .output()
+                        .expect("Failed to run backend application");
+
+                    if build_backend_server.status.success() {
+                        self.bug_cont = 0;
+                        PrintCommand::UnitTest.print_agent_message(
+                            &self.attributes.position.as_str(),
+                            "Backend Code unit Testing: Test server build successful...",
+                        );
+                    } else {
+                        let error_arr: Vec<u8> = build_backend_server.stderr;
+                        let error_str: String = String::from_utf8(error_arr).unwrap();
+
+                        self.bug_cont += 1;
+                        self.bug_errors = Some(error_str);
+
+                        if self.bug_cont > 2 {
+                            PrintCommand::Issue.print_agent_message(
+                                &self.attributes.position.as_str(),
+                                "Backend Code Unit Testing: Too many bugs found in code.",
+                            );
+                            panic!("Error: Too many bugs");
+                        }
+
+                        self.attributes.state = AgentState::Working;
+                        continue;
+                    }
+
                     self.attributes.state = AgentState::Finished;
                 }
                 _ => {}

@@ -9,8 +9,11 @@ use crate::{apis::call_request::call_gpt, models::general::llm::Message};
 const CODE_TEMPLATE_PATH: &str =
     "/Users/por-livinginsider/Desktop/living-projects/basic_auto_gpt/web_gpt_template/src/code_template.rs";
 
-const EXEC_MAIN_PATH: &str =
+pub const EXEC_MAIN_PATH: &str =
     "/Users/por-livinginsider/Desktop/living-projects/basic_auto_gpt/web_gpt_template/src/main.rs";
+
+pub const WEB_SERVER_PROJECT_PATH: &str =
+    "/Users/por-livinginsider/Desktop/living-projects/basic_auto_gpt/web_gpt_template/";
 
 const API_SCHEMA_PATH: &str =
     "/Users/por-livinginsider/Desktop/living-projects/basic_auto_gpt/schemas/api_schema.rs";
