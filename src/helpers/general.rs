@@ -79,6 +79,11 @@ pub fn read_code_template_contents() -> String {
     fs::read_to_string(path).expect("Failed to read code template.")
 }
 
+pub fn read_exec_main_contents() -> String {
+    let path: String = String::from(EXEC_MAIN_PATH);
+    fs::read_to_string(path).expect("Failed to read code template.")
+}
+
 pub fn save_backend_code(contents: &String) {
     let path: String = String::from(EXEC_MAIN_PATH);
     fs::write(path, contents).expect("Failed to write main.rs file.")
