@@ -1,1 +1,21 @@
-The function will return the improved webserver code based on the project description and the provided code template. The improved code will have all the bugs removed, additional minor functionality added, and will ensure that all the backend requirements specified in the project description are met. The function will only write the code and will not provide any commentary. The function will not use any libraries other than the ones provided in the template: reqwest, serde, serde_json, tokio, actix-web, async-trait. The output of the function will be printed.
+use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+async fn get_current_time() -> impl Responder {
+    let current_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    HttpResponse::Ok().body(format!("Current time: {}", current_time))
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            .route("/time", web::get().to(get_current_time))
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
+}

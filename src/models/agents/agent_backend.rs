@@ -199,6 +199,99 @@ impl SpecialFunctions for AgentBackendDeveloper {
                         continue;
                     }
 
+                    let api_endpoints_str: String = self.call_extract_rest_api_endpoints().await;
+
+                    let api_endpoints: Vec<RouteObject> =
+                        serde_json::from_str(api_endpoints_str.as_str())
+                            .expect("Failed to decode API Endpoints");
+
+                    let check_endpoint: Vec<RouteObject> = api_endpoints
+                        .iter()
+                        .filter(|&route_object| {
+                            route_object.method == "get" && route_object.is_route_dynamic == "false"
+                        })
+                        .cloned()
+                        .collect();
+
+                    factsheet.api_endpoint_schema = Some(check_endpoint.clone());
+
+                    PrintCommand::UnitTest.print_agent_message(
+                        &self.attributes.position.as_str(),
+                        "Backend Code Unit Testing: String web server...",
+                    );
+
+                    let mut run_backend_server: std::process::Child = Command::new("cargo")
+                        .arg("run")
+                        .current_dir(WEB_SERVER_PROJECT_PATH)
+                        .stdout(Stdio::piped())
+                        .stdout(Stdio::piped())
+                        .spawn()
+                        .expect("Failed to run backend application");
+
+                    PrintCommand::UnitTest.print_agent_message(
+                        &self.attributes.position.as_str(),
+                        "Backend Code Unit Testing: Launching tests on server in 5 seconds...",
+                    );
+
+                    let seconds_sleep: Duration = Duration::from_secs(5);
+                    time::sleep(seconds_sleep);
+
+                    for endpoint in check_endpoint {
+                        let testing_msg: String =
+                            format!("Testing endpoint '{}'...", endpoint.route);
+
+                        PrintCommand::UnitTest.print_agent_message(
+                            &self.attributes.position.as_str(),
+                            testing_msg.as_str(),
+                        );
+
+                        let client: Client = Client::builder()
+                            .timeout(Duration::from_secs(5))
+                            .build()
+                            .unwrap();
+
+                        let url: String = format!("http://localhost:8080{}", endpoint.route);
+
+                        match check_status_code(&client, &url).await {
+                            Ok(status_code) => {
+                                if status_code != 200 {
+                                    let err_msg: String = format!(
+                                        "WARING: Failed to call backend url endpoint {}",
+                                        endpoint.route
+                                    );
+
+                                    PrintCommand::UnitTest.print_agent_message(
+                                        &self.attributes.position.as_str(),
+                                        err_msg.as_str(),
+                                    );
+                                }
+                            }
+                            Err(e) => {
+                                run_backend_server
+                                    .kill()
+                                    .expect("Failed to kill backend web server");
+
+                                let err_msg: String = format!("Error checking backend {}", e);
+
+                                PrintCommand::UnitTest.print_agent_message(
+                                    &self.attributes.position.as_str(),
+                                    err_msg.as_str(),
+                                );
+                            }
+                        }
+                    }
+
+                    save_api_endpoints(&api_endpoints_str);
+
+                    PrintCommand::UnitTest.print_agent_message(
+                        &self.attributes.position.as_str(),
+                        "Backend testing complete...",
+                    );
+
+                    run_backend_server
+                        .kill()
+                        .expect("Failed to kill backend web server on completion");
+
                     self.attributes.state = AgentState::Finished;
                 }
                 _ => {}
@@ -233,6 +326,7 @@ mod tests {
 
         let mut factsheet: FactSheet = serde_json::from_str(factsheet_str).unwrap();
 
+        agent.attributes.state = AgentState::Discovery;
         agent
             .execute(&mut factsheet)
             .await
