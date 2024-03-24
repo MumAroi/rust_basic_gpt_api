@@ -12,7 +12,16 @@ mod models;
 
 use helpers::command_line::get_user_response;
 
-fn main() {
-    let user_req: String = get_user_response("What are web building today");
-    dbg!(user_req);
+use crate::models::agent_manager::managing_agent;
+use models::agent_manager::managing_agent::ManagingAgent;
+
+#[tokio::main]
+async fn main() {
+    let user_req: String = get_user_response("What are website are we building today?");
+
+    let mut managing_agent: ManagingAgent = ManagingAgent::new(user_req).await.expect("Error creating agent");
+
+    managing_agent.execute_project().await;
+
+    dbg!(managing_agent);
 }
